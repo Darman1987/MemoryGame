@@ -16,7 +16,7 @@
             vertical-align: baseline;
         }
         canvas {
-            background: rgb(235, 247, 255);
+            /* background: rgb(235, 247, 255); */
             display: block;
             margin: 0 auto;
             border: 3px solid black;
@@ -24,7 +24,8 @@
         #newGame{           
             margin-top: 10px;           
             border: 2px solid black;
-            color: white;            
+            color: white; 
+            background-color: #4CAF50;           
             padding: 16px 32px;
             text-align: center;
             text-decoration: none;
@@ -69,7 +70,7 @@ var Tile = function(x, y, face) {
 
 Tile.prototype.draw = function() {
  
-    ctx.fillStyle = "rgb(214, 247, 202)";
+    // ctx.fillStyle = "rgb(214, 247, 202)";
     ctx.beginPath();
     ctx.lineWidth = 5;
     ctx.strokeStyle = 'black'; 
@@ -163,7 +164,7 @@ for (var i = 0; i < NUM_COLS; i++) {
     }
 }
 
-background(255, 255, 255);
+// background(255, 255, 255);
 
 function background(r,g,b){
     canvas.style.backgroundColor = "rgb("+r+","+g+","+b+")";
@@ -208,14 +209,14 @@ var delayStartFC = null;
             }
             flippedTiles = [];
             window.requestAnimationFrame(draw);
-        }, 500);          
+        }, 600);          
              
      }
        
 }
 
 function draw() {
-    background(255, 255, 255);
+    // background(255, 255, 255);
        
     for (var i = 0; i < tiles.length; i++) {
         tiles[i].draw();
