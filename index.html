@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        /*reset styles*/
+        *{ 
+            margin: 0;
+            padding: 0;
+            border: 0;
+            font-size: 100%;
+            font: inherit;
+            vertical-align: baseline;
+        }
+        canvas {
+            /* background: rgb(235, 247, 255); */
+            display: block;
+            margin: 0 auto;
+            border: 3px solid black;
+        }
+        #newGame{           
+            margin-top: 10px;           
+            border: 2px solid black;
+            color: white; 
+            background-color: #4CAF50;           
+            padding: 16px 32px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 16px;           
+            cursor: pointer;
+        }
+        #container {
+        display: none;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+
+        }
+        
+    </style>
+  
+</head>
+<body>
+    <canvas id="canvas" width="400" height="500"></canvas>
+    <div id="container">
+        <button type="button" id="newGame" onclick="location.reload();">New Game</button>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        document.addEventListener("mousedown", mouseClicked, false);        
+        window.requestAnimationFrame(draw);
+       
+/////////////////////////////////////
+//Memory Game//
+
+
+var Tile = function(x, y, face) {
+    this.x = x;
+    this.y = y;
+    this.size = 90;
+    this.face = face;
+    this.isFaceUp = false;
+    this.isMatch = false;
+};
+
+Tile.prototype.draw = function() {
+ 
+    ctx.fillStyle = "rgb(255, 255, 255)";
+    ctx.beginPath();
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'black'; 
+    ctx.fillRect(this.x, this.y, this.size, this.size);
+    ctx.strokeRect(this.x, this.y, this.size, this.size);
+
+
+    const cover = new Image(); 
+    cover.src = 'img/Spinach.jpg';  
+    
+   if (this.isFaceUp) { 
+        //this.face.addEventListener('load', e => {
+        ctx.drawImage(this.face, this.x, this.y, this.size, this.size);
+        //});
+    } else {
+        cover.addEventListener('load', e => {
+        ctx.drawImage(cover, this.x, this.y, this.size, this.size);
+        });
+    }
+};
+
+Tile.prototype.isUnderMouse = function(x, y) {
+    return x >= this.x && x <= this.x + this.size  &&
+        y >= this.y && y <= this.y + this.size;
+};
+
+// Global config
+var NUM_COLS = 4;
+var NUM_ROWS = 5;
+
+// Declare an array of all possible faces
+var faces = [
+    getImage("Apple"),
+    getImage("Capsicum"),
+    getImage("Carrot"),
+    getImage("Celery"),
+    getImage("Cucumber"),
+    getImage("Lemon"),
+    getImage("Onion"),
+    getImage("Tomato"),
+    getImage("Zucchini"),
+    getImage("Eggplant")
+];
+
+function getImage(url){
+    let myImage = new Image();
+    myImage.src = 'img/'+url+'.png';  
+    return myImage 
+}
+
+// Make an array which has 2 of each, then randomize it
+var possibleFaces = faces.slice(0);
+var selected = [];
+for (var i = 0; i < (NUM_COLS * NUM_ROWS) / 2; i++) {
+    // Randomly pick one from the array of remaining faces
+    var randomInd = Math.floor(Math.random(possibleFaces.length));
+    var face = possibleFaces[randomInd];
+    // Push twice onto array
+    selected.push(face);
+    selected.push(face);
+    // Remove from array
+    possibleFaces.splice(randomInd, 1);
+}
+
+// Now shuffle the elements of that array
+var shuffleArray = function(array) {
+    var counter = array.length;
+
+    // While there are elements in the array
+    while (counter > 0) {
+        // Pick a random index
+        var ind = Math.floor(Math.random() * counter);
+        // Decrease counter by 1
+        counter--;
+        // And swap the last element with it
+        var temp = array[counter];
+        array[counter] = array[ind];
+        array[ind] = temp;
+    }
+};
+shuffleArray(selected);
+
+// Create the tiles
+var tiles = [];
+for (var i = 0; i < NUM_COLS; i++) {
+    for (var j = 0; j < NUM_ROWS; j++) {
+        var tileX = i * 100+5;
+        var tileY = j * 100+5;
+        var tileFace = selected.pop();
+        tiles.push(new Tile(tileX, tileY, tileFace));
+    }
+}
+
+// background(255, 255, 255);
+
+function background(r,g,b){
+    canvas.style.backgroundColor = "rgb("+r+","+g+","+b+")";
+}
+
+var numTries = 0;
+var numMatches = 0;
+var flippedTiles = [];
+var delayStartFC = null;
+
+ function mouseClicked (event) {
+    for (var i = 0; i < tiles.length; i++) {
+        var tile = tiles[i];
+        if (tile.isUnderMouse( event.offsetX,  event.offsetY)) {
+            if (flippedTiles.length < 2 && !tile.isFaceUp) {
+                tile.isFaceUp = true;
+                flippedTiles.push(tile);
+                if (flippedTiles.length === 2) {
+                    numTries++;
+                    if (flippedTiles[0].face === flippedTiles[1].face) {
+                        flippedTiles[0].isMatch = true;
+                        flippedTiles[1].isMatch = true;
+                        flippedTiles.length = 0;
+                        numMatches++;
+                    }
+                    
+                }
+            } 
+         
+        }
+    }
+    
+    window.requestAnimationFrame(draw);
+    if(flippedTiles.length==2){
+        
+        setTimeout(function(){
+            for (var i = 0; i < tiles.length; i++) {
+                var tile = tiles[i];
+                if (!tile.isMatch) {
+                    tile.isFaceUp = false;
+                }
+            }
+            flippedTiles = [];
+            window.requestAnimationFrame(draw);
+        }, 600);          
+             
+     }
+       
+}
+
+function draw() {
+    background(255, 255, 255);
+       
+    for (var i = 0; i < tiles.length; i++) {
+        tiles[i].draw();
+    }
+    
+    if (numMatches === tiles.length/2) {
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(50, 220, 300, 50);
+
+
+        ctx.fillStyle = "rgb(0, 0, 0)";
+        ctx.font = "bold 20px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("You did it in "+ numTries + " tries!", 200, 250);
+        document.getElementById("container").style.display = "flex"; 
+        
+    }
+}
+
+
+</script>
+    
+</body>
+</html>
