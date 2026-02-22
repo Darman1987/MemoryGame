@@ -2,242 +2,769 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Memory — Match the Pairs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        /*reset styles*/
-        *{ 
-            margin: 0;
-            padding: 0;
-            border: 0;
-            font-size: 100%;
-            font: inherit;
-            vertical-align: baseline;
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            min-height: 100vh;
+            min-height: 100dvh;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 400;
+            background: linear-gradient(145deg, #0f0f14 0%, #1a1a24 40%, #15151d 100%);
+            color: #e8e4df;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(12px, 4vw, 24px);
+            overflow-x: hidden;
         }
-        canvas {
-            /* background: rgb(235, 247, 255); */
-            display: block;
-            margin: 0 auto;
-            border: 3px solid black;
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(180, 140, 90, 0.12), transparent),
+                        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(100, 80, 120, 0.08), transparent);
+            pointer-events: none;
+            z-index: 0;
         }
-        #newGame{           
-            margin-top: 10px;           
-            border: 2px solid black;
-            color: white; 
-            background-color: #4CAF50;           
-            padding: 16px 32px;
+        .game-card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: min(480px, 100vw - 24px);
+            background: linear-gradient(165deg, rgba(28, 28, 34, 0.95) 0%, rgba(22, 22, 28, 0.98) 100%);
+            border: 1px solid rgba(200, 180, 140, 0.2);
+            border-radius: clamp(16px, 4vw, 24px);
+            padding: clamp(16px, 4vw, 28px) clamp(20px, 4vw, 32px) clamp(20px, 4vw, 32px);
+            box-shadow: 0 25px 60px rgba(0,0,0,0.5),
+                        0 0 0 1px rgba(255,255,255,0.03) inset;
+        }
+        .game-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.5rem, 5vw, 2rem);
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #d4c4a0;
             text-align: center;
-            text-decoration: none;
-            font-size: 16px;           
+            margin-bottom: clamp(12px, 3vw, 20px);
+        }
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 0 4px;
+        }
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: rgba(232, 228, 223, 0.85);
+        }
+        .hud-item span { color: #d4c4a0; font-variant-numeric: tabular-nums; }
+        .mode-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 14px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(212, 196, 160, 0.3);
+            background: rgba(0,0,0,0.2);
+        }
+        .mode-tabs button {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            color: rgba(232, 228, 223, 0.7);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
             cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .mode-tabs button.active {
+            background: rgba(212, 196, 160, 0.25);
+            color: #d4c4a0;
+        }
+        .mode-tabs button:not(.active):hover {
+            background: rgba(255,255,255,0.05);
+            color: #e8e4df;
+        }
+        .hud-multiplayer {
+            display: none;
+            flex-wrap: wrap;
+            gap: 12px 20px;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .hud-multiplayer.visible { display: flex; }
+        .hud-multiplayer .turn-badge {
+            background: rgba(212, 196, 160, 0.2);
+            color: #d4c4a0;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+        .hud-solo {
+            display: none;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 0 4px;
+        }
+        .hud-solo.visible { display: flex; }
+        .instructions-toggle {
+            background: transparent;
+            border: 1px solid rgba(212, 196, 160, 0.4);
+            color: #d4c4a0;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            padding: 8px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-bottom: 14px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .instructions-toggle:hover {
+            background: rgba(212, 196, 160, 0.15);
+        }
+        .instructions-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 14, 0.88);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(16px, 4vw, 24px);
+            overflow-y: auto;
+        }
+        .instructions-overlay.visible { display: flex; }
+        .instructions-overlay .overlay-card {
+            text-align: left;
+            max-width: min(420px, 100%);
+        }
+        .instructions-overlay .overlay-card h2 { margin-bottom: 16px; }
+        .instructions-overlay .overlay-card .overlay-list li {
+            font-size: clamp(0.85rem, 2.2vw, 1rem);
+            margin-bottom: 10px;
+        }
+        .instructions-overlay .overlay-card .overlay-list li strong { color: #d4c4a0; }
+        .instructions-overlay .overlay-card .btn-wrap { text-align: center; margin-top: 20px; }
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 15, 20, 0.95);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 24px;
+        }
+        .loading-overlay.hidden { display: none; }
+        .loading-overlay .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(212, 196, 160, 0.2);
+            border-top-color: #d4c4a0;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay .loading-text {
+            color: rgba(232, 228, 223, 0.9);
+            font-size: 1rem;
+        }
+        #canvas-wrap {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.06);
+            max-width: 100%;
+            width: fit-content;
+            margin: 0 auto;
+            contain: layout paint;
+        }
+        #canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: min(520px, 75vh);
+            cursor: pointer;
+            background: rgba(15, 15, 20, 0.6);
+            touch-action: manipulation;
         }
         #container {
-        display: none;
-        flex-direction: row;
-        justify-content: center;
-        align-items: center;
-
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 24px;
         }
-        
+        #container .win-msg {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            color: #d4c4a0;
+            text-align: center;
+        }
+        #container .win-stats {
+            font-size: 0.95rem;
+            color: rgba(232, 228, 223, 0.8);
+        }
+        #newGame {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 500;
+            font-size: 1rem;
+            letter-spacing: 0.06em;
+            padding: 14px 32px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(145deg, #c9b896 0%, #a89068 100%);
+            color: #0f0f14;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 16px rgba(168, 144, 104, 0.35);
+        }
+        #newGame:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(168, 144, 104, 0.45);
+        }
+        #newGame:active { transform: translateY(0); }
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 14, 0.88);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(16px, 4vw, 24px);
+            overflow-y: auto;
+        }
+        .overlay.visible { display: flex; }
+        .overlay-card {
+            background: linear-gradient(165deg, rgba(28, 28, 34, 0.98) 0%, rgba(22, 22, 28, 1) 100%);
+            border: 1px solid rgba(200, 180, 140, 0.25);
+            border-radius: clamp(16px, 4vw, 24px);
+            padding: clamp(24px, 6vw, 40px) clamp(24px, 5vw, 44px);
+            text-align: center;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+            max-width: min(360px, 100%);
+        }
+        .overlay-card h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.75rem, 5vw, 2.2rem);
+            font-weight: 600;
+            color: #d4c4a0;
+            margin-bottom: 12px;
+        }
+        .overlay-card .stats {
+            font-size: 1rem;
+            color: rgba(232, 228, 223, 0.9);
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+        .overlay-card .overlay-list {
+            list-style: disc;
+            padding-left: 1.35em;
+            margin: 0 0 24px 0;
+            text-align: left;
+        }
+        .overlay-card .overlay-list li {
+            font-size: 1rem;
+            color: rgba(232, 228, 223, 0.9);
+            line-height: 1.6;
+            margin-bottom: 6px;
+        }
+        .overlay-card .overlay-list li:last-child { margin-bottom: 0; }
+        .newGameBtn {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 500;
+            font-size: 1rem;
+            letter-spacing: 0.06em;
+            padding: 14px 32px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(145deg, #c9b896 0%, #a89068 100%);
+            color: #0f0f14;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 16px rgba(168, 144, 104, 0.35);
+        }
+        .newGameBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(168, 144, 104, 0.45);
+        }
     </style>
-  
 </head>
 <body>
-    <canvas id="canvas" width="400" height="500"></canvas>
-    <div id="container">
-        <button type="button" id="newGame" onclick="location.reload();">New Game</button>
+    <div class="game-card">
+        <h1 class="game-title">Memory</h1>
+        <button type="button" class="instructions-toggle" id="instructionsToggle">How to play</button>
+        <div class="mode-tabs">
+            <button type="button" class="mode-tab active" data-mode="solo">Solo</button>
+            <button type="button" class="mode-tab" data-mode="multi">2 Players</button>
+        </div>
+        <div class="hud-solo visible" id="hudSolo">
+            <div class="hud-item"><span id="moves">0</span> moves</div>
+            <div class="hud-item"><span id="timer">0:00</span></div>
+        </div>
+        <div class="hud-multiplayer" id="hudMulti">
+            <div class="hud-item">P1: <span id="score1">0</span></div>
+            <div class="hud-item turn-badge" id="turnBadge">Turn: Player 1</div>
+            <div class="hud-item">P2: <span id="score2">0</span></div>
+        </div>
+        <div id="canvas-wrap">
+            <canvas id="canvas" width="410" height="520"></canvas>
+        </div>
+        <div id="container">
+            <p class="win-msg">Well done!</p>
+            <p class="win-stats" id="winStats"></p>
+            <button type="button" id="newGame">New game</button>
+        </div>
     </div>
-    
+    <div class="overlay" id="winOverlay">
+        <div class="overlay-card">
+            <h2 id="overlayTitle">Game over</h2>
+            <ul class="overlay-list stats" id="overlayStats"></ul>
+            <button type="button" id="newGameOverlay" class="newGameBtn">New game</button>
+        </div>
+    </div>
+    <div class="instructions-overlay" id="instructionsOverlay">
+        <div class="overlay-card">
+            <h2>How to play</h2>
+            <ul class="overlay-list">
+                <li><strong>Goal:</strong> Find all matching pairs by flipping two cards at a time.</li>
+                <li><strong>Play:</strong> Click or tap a card to flip it. Flip a second card — if they match, they stay face-up; if not, they flip back. Remember their positions to make fewer moves.</li>
+                <li><strong>Solo:</strong> Finish in fewer moves and less time.</li>
+                <li><strong>2 Players:</strong> Take turns. Match a pair to score a point and go again; miss and the other player goes. Most pairs wins!</li>
+            </ul>
+            <div class="btn-wrap">
+                <button type="button" id="instructionsClose" class="newGameBtn">Got it</button>
+            </div>
+        </div>
+    </div>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner" aria-hidden="true"></div>
+        <p class="loading-text">Loading images…</p>
+    </div>
+
     <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        document.addEventListener("mousedown", mouseClicked, false);        
-        window.requestAnimationFrame(draw);
-       
-/////////////////////////////////////
-//Memory Game//
+        (function() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const NUM_COLS = 4;
+            const NUM_ROWS = 5;
+            const TILE_SIZE = 96;
+            const PAD = 5;
+            const FLIP_DURATION = 220;
+            const MATCH_PULSE_DURATION = 400;
+            const CANVAS_W = 410;
+            const CANVAS_H = 520;
 
+            canvas.setAttribute('width', CANVAS_W);
+            canvas.setAttribute('height', CANVAS_H);
 
-var Tile = function(x, y, face) {
-    this.x = x;
-    this.y = y;
-    this.size = 90;
-    this.face = face;
-    this.isFaceUp = false;
-    this.isMatch = false;
-};
+            var audioCtx = null;
+            function getAudio() {
+                if (audioCtx) return audioCtx;
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                return audioCtx;
+            }
+            function beep(vol, freq, duration, type) {
+                try {
+                    const ctx = getAudio();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = freq;
+                    osc.type = type || 'sine';
+                    gain.gain.setValueAtTime(vol, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + duration);
+                } catch (_) {}
+            }
+            function soundFlip() { beep(0.15, 320, 0.06, 'sine'); }
+            function soundMatch() { beep(0.2, 523, 0.08, 'sine'); beep(0.15, 659, 0.12, 'sine'); }
+            function soundMismatch() { beep(0.12, 200, 0.15, 'sawtooth'); }
+            function soundWin() {
+                [523, 659, 784, 1047].forEach((f, i) => {
+                    setTimeout(() => beep(0.2, f, 0.15, 'sine'), i * 120);
+                });
+            }
 
-Tile.prototype.draw = function() {
- 
-    ctx.fillStyle = "rgb(255, 255, 255)";
-    ctx.beginPath();
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = 'black'; 
-    ctx.fillRect(this.x, this.y, this.size, this.size);
-    ctx.strokeRect(this.x, this.y, this.size, this.size);
+            const imageNames = ['Apple','Capsicum','Carrot','Celery','Cucumber','Lemon','Onion','Tomato','Zucchini','Eggplant'];
+            const coverSrc = 'img/Spinach.jpg';
 
+            function loadImageAsync(src) {
+                return new Promise(function(resolve, reject) {
+                    const img = new Image();
+                    img.onload = function() { resolve(img); };
+                    img.onerror = function() { resolve(img); };
+                    img.src = src;
+                });
+            }
 
-    const cover = new Image(); 
-    cover.src = 'img/Spinach.jpg';  
-    
-   if (this.isFaceUp) { 
-        //this.face.addEventListener('load', e => {
-        ctx.drawImage(this.face, this.x, this.y, this.size, this.size);
-        //});
-    } else {
-        cover.addEventListener('load', e => {
-        ctx.drawImage(cover, this.x, this.y, this.size, this.size);
-        });
-    }
-};
+            let coverImg = null;
+            let faceImages = [];
 
-Tile.prototype.isUnderMouse = function(x, y) {
-    return x >= this.x && x <= this.x + this.size  &&
-        y >= this.y && y <= this.y + this.size;
-};
+            function Tile(x, y, faceImg) {
+                this.x = x;
+                this.y = y;
+                this.size = TILE_SIZE;
+                this.faceImg = faceImg;
+                this.isFaceUp = false;
+                this.isMatch = false;
+                this.flipProgress = 0;
+                this.matchPulse = 0;
+            }
 
-// Global config
-var NUM_COLS = 4;
-var NUM_ROWS = 5;
+            Tile.prototype.isUnderMouse = function(x, y) {
+                return x >= this.x && x <= this.x + this.size && y >= this.y && y <= this.y + this.size;
+            };
 
-// Declare an array of all possible faces
-var faces = [
-    getImage("Apple"),
-    getImage("Capsicum"),
-    getImage("Carrot"),
-    getImage("Celery"),
-    getImage("Cucumber"),
-    getImage("Lemon"),
-    getImage("Onion"),
-    getImage("Tomato"),
-    getImage("Zucchini"),
-    getImage("Eggplant")
-];
+            Tile.prototype.draw = function(now) {
+                const radius = 10;
+                const cx = this.x + this.size / 2;
+                const cy = this.y + this.size / 2;
 
-function getImage(url){
-    let myImage = new Image();
-    myImage.src = 'img/'+url+'.png';  
-    return myImage 
-}
+                ctx.save();
 
-// Make an array which has 2 of each, then randomize it
-var possibleFaces = faces.slice(0);
-var selected = [];
-for (var i = 0; i < (NUM_COLS * NUM_ROWS) / 2; i++) {
-    // Randomly pick one from the array of remaining faces
-    var randomInd = Math.floor(Math.random(possibleFaces.length));
-    var face = possibleFaces[randomInd];
-    // Push twice onto array
-    selected.push(face);
-    selected.push(face);
-    // Remove from array
-    possibleFaces.splice(randomInd, 1);
-}
-
-// Now shuffle the elements of that array
-var shuffleArray = function(array) {
-    var counter = array.length;
-
-    // While there are elements in the array
-    while (counter > 0) {
-        // Pick a random index
-        var ind = Math.floor(Math.random() * counter);
-        // Decrease counter by 1
-        counter--;
-        // And swap the last element with it
-        var temp = array[counter];
-        array[counter] = array[ind];
-        array[ind] = temp;
-    }
-};
-shuffleArray(selected);
-
-// Create the tiles
-var tiles = [];
-for (var i = 0; i < NUM_COLS; i++) {
-    for (var j = 0; j < NUM_ROWS; j++) {
-        var tileX = i * 100+5;
-        var tileY = j * 100+5;
-        var tileFace = selected.pop();
-        tiles.push(new Tile(tileX, tileY, tileFace));
-    }
-}
-
-// background(255, 255, 255);
-
-function background(r,g,b){
-    canvas.style.backgroundColor = "rgb("+r+","+g+","+b+")";
-}
-
-var numTries = 0;
-var numMatches = 0;
-var flippedTiles = [];
-var delayStartFC = null;
-
- function mouseClicked (event) {
-    for (var i = 0; i < tiles.length; i++) {
-        var tile = tiles[i];
-        if (tile.isUnderMouse( event.offsetX,  event.offsetY)) {
-            if (flippedTiles.length < 2 && !tile.isFaceUp) {
-                tile.isFaceUp = true;
-                flippedTiles.push(tile);
-                if (flippedTiles.length === 2) {
-                    numTries++;
-                    if (flippedTiles[0].face === flippedTiles[1].face) {
-                        flippedTiles[0].isMatch = true;
-                        flippedTiles[1].isMatch = true;
-                        flippedTiles.length = 0;
-                        numMatches++;
-                    }
-                    
+                let scale = 1;
+                if (this.matchPulse > 0) {
+                    const t = 1 - this.matchPulse;
+                    scale = 1 + 0.08 * Math.sin(t * Math.PI);
                 }
-            } 
-         
-        }
-    }
-    
-    window.requestAnimationFrame(draw);
-    if(flippedTiles.length==2){
-        
-        setTimeout(function(){
-            for (var i = 0; i < tiles.length; i++) {
-                var tile = tiles[i];
-                if (!tile.isMatch) {
-                    tile.isFaceUp = false;
+                ctx.translate(cx, cy);
+                ctx.scale(scale, scale);
+                ctx.translate(-cx, -cy);
+
+                roundRect(this.x, this.y, this.size, this.size, radius);
+                if (this.matchPulse > 0) {
+                    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+                    ctx.shadowBlur = 6;
+                    ctx.shadowOffsetY = 2;
+                }
+                ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                ctx.fill();
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
+                ctx.strokeStyle = 'rgba(212, 196, 160, 0.35)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.clip();
+
+                const flip = this.flipProgress;
+                const scaleX = flip <= 0.5 ? 1 - flip * 2 : (flip - 0.5) * 2;
+                if (scaleX <= 0.01) { ctx.restore(); return; }
+                ctx.translate(cx, cy);
+                ctx.scale(scaleX, 1);
+                ctx.translate(-cx, -cy);
+
+                const showFace = flip >= 0.5;
+                const drawImg = showFace ? this.faceImg : coverImg;
+                if (drawImg && drawImg.complete && drawImg.naturalWidth) {
+                    ctx.drawImage(drawImg, this.x, this.y, this.size, this.size);
+                } else {
+                    ctx.fillStyle = 'rgba(40, 38, 35, 0.9)';
+                    ctx.fillRect(this.x, this.y, this.size, this.size);
+                }
+
+                ctx.restore();
+            };
+
+            function shuffleArray(arr) {
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
                 }
             }
-            flippedTiles = [];
-            window.requestAnimationFrame(draw);
-        }, 600);          
-             
-     }
-       
-}
 
-function draw() {
-    background(255, 255, 255);
-       
-    for (var i = 0; i < tiles.length; i++) {
-        tiles[i].draw();
-    }
-    
-    if (numMatches === tiles.length/2) {
-        ctx.fillStyle = "yellow";
-        ctx.fillRect(50, 220, 300, 50);
+            function initGame() {
+                const n = (NUM_COLS * NUM_ROWS) / 2;
+                const pool = imageNames.slice(0, n).map(name => faceImages[imageNames.indexOf(name)]);
+                let pairs = [];
+                pool.forEach(img => { pairs.push(img); pairs.push(img); });
+                shuffleArray(pairs);
+
+                const tiles = [];
+                for (let c = 0; c < NUM_COLS; c++) {
+                    for (let r = 0; r < NUM_ROWS; r++) {
+                        const x = c * (TILE_SIZE + PAD) + PAD;
+                        const y = r * (TILE_SIZE + PAD) + PAD;
+                        tiles.push(new Tile(x, y, pairs.pop()));
+                    }
+                }
+                return tiles;
+            }
+
+            let tiles = [];
+            let numTries = 0;
+            let flippedTiles = [];
+            let gameStartTime = null;
+            let timerInterval = null;
+            let lastFrame = performance.now();
+            let animating = false;
+
+            function roundRect(x, y, w, h, r) {
+                ctx.beginPath();
+                ctx.moveTo(x + r, y);
+                ctx.arcTo(x + w, y, x + w, y + h, r);
+                ctx.arcTo(x + w, y + h, x, y + h, r);
+                ctx.arcTo(x, y + h, x, y, r);
+                ctx.arcTo(x, y, x + w, y, r);
+                ctx.closePath();
+            }
+
+            const movesEl = document.getElementById('moves');
+            const timerEl = document.getElementById('timer');
+            const container = document.getElementById('container');
+            const winOverlay = document.getElementById('winOverlay');
+            const overlayStats = document.getElementById('overlayStats');
+            const overlayTitle = document.getElementById('overlayTitle');
+            const hudSolo = document.getElementById('hudSolo');
+            const hudMulti = document.getElementById('hudMulti');
+            const score1El = document.getElementById('score1');
+            const score2El = document.getElementById('score2');
+            const turnBadge = document.getElementById('turnBadge');
+
+            let isMultiplayer = false;
+            let currentPlayer = 1;
+            let score1 = 0, score2 = 0;
+            let moves1 = 0, moves2 = 0;
+            let gameOverShown = false;
+
+            function formatTime(sec) {
+                const m = Math.floor(sec / 60);
+                const s = sec % 60;
+                return m + ':' + (s < 10 ? '0' : '') + s;
+            }
+
+            function startTimer() {
+                if (gameStartTime) return;
+                gameStartTime = Date.now();
+                timerInterval = setInterval(() => {
+                    const sec = Math.floor((Date.now() - gameStartTime) / 1000);
+                    const m = Math.floor(sec / 60);
+                    const s = sec % 60;
+                    timerEl.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+                }, 200);
+            }
+
+            function stopTimer() {
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            function showWin() {
+                if (gameOverShown) return;
+                gameOverShown = true;
+                stopTimer();
+                container.style.display = 'none';
+                winOverlay.classList.add('visible');
+
+                if (isMultiplayer) {
+                    if (score1 > score2) {
+                        overlayTitle.textContent = 'Player 1 wins!';
+                    } else if (score2 > score1) {
+                        overlayTitle.textContent = 'Player 2 wins!';
+                    } else {
+                        overlayTitle.textContent = "It's a tie!";
+                    }
+                    overlayStats.innerHTML = '<li>Player 1: ' + score1 + ' pairs (' + moves1 + ' moves)</li><li>Player 2: ' + score2 + ' pairs (' + moves2 + ' moves)</li>';
+                } else {
+                    var sec = gameStartTime ? Math.floor((Date.now() - gameStartTime) / 1000) : 0;
+                    var timeStr = formatTime(sec);
+                    overlayTitle.textContent = 'Game over';
+                    overlayStats.innerHTML = '<li>Time: ' + timeStr + '</li><li>Moves: ' + numTries + '</li>';
+                }
+                soundWin();
+                document.getElementById('newGameOverlay').focus();
+            }
+
+            function checkGameOver() {
+                if (tiles.length === 0) return;
+                var numMatches = tiles.filter(function(t) { return t.isMatch; }).length / 2;
+                if (numMatches === tiles.length / 2) showWin();
+            }
+
+            function tickFlip(now) {
+                const delta = Math.min(now - lastFrame, 50);
+                lastFrame = now;
+                let any = false;
+                tiles.forEach(tile => {
+                    if (tile.flipProgress > 0 && tile.flipProgress < 1) {
+                        tile.flipProgress = Math.min(1, tile.flipProgress + delta / FLIP_DURATION);
+                        any = true;
+                    }
+                    if (tile.matchPulse > 0) {
+                        tile.matchPulse = Math.max(0, tile.matchPulse - delta / MATCH_PULSE_DURATION);
+                        any = true;
+                    }
+                });
+                animating = any;
+            }
+
+            function draw() {
+                if (tiles.length === 0) return;
+                const now = performance.now();
+                tickFlip(now);
+
+                ctx.fillStyle = 'rgba(18, 18, 24, 0.95)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                tiles.forEach(t => t.draw(now));
+
+                checkGameOver();
+
+                if (animating) requestAnimationFrame(draw);
+            }
+
+            function flipDownNonMatch() {
+                flippedTiles.forEach(tile => {
+                    tile.flipProgress = 0;
+                    tile.isFaceUp = false;
+                });
+                flippedTiles = [];
+            }
+
+            document.getElementById('instructionsToggle').onclick = function() {
+                document.getElementById('instructionsOverlay').classList.add('visible');
+            };
+            document.getElementById('instructionsClose').onclick = function() {
+                document.getElementById('instructionsOverlay').classList.remove('visible');
+            };
+
+            canvas.addEventListener('click', function(e) {
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+
+                for (let i = 0; i < tiles.length; i++) {
+                    const tile = tiles[i];
+                    if (!tile.isUnderMouse(x, y) || tile.isMatch || tile.isFaceUp) continue;
+                    if (flippedTiles.length >= 2) break;
+
+                    startTimer();
+                    tile.isFaceUp = true;
+                    tile.flipProgress = 0.01;
+                    flippedTiles.push(tile);
+                    soundFlip();
+
+                    if (flippedTiles.length === 2) {
+                        numTries++;
+                        movesEl.textContent = numTries;
+                        if (isMultiplayer) {
+                            if (currentPlayer === 1) moves1++; else moves2++;
+                        }
+
+                        const a = flippedTiles[0];
+                        const b = flippedTiles[1];
+                        if (a.faceImg === b.faceImg) {
+                            a.isMatch = true;
+                            b.isMatch = true;
+                            a.matchPulse = 1;
+                            b.matchPulse = 1;
+                            flippedTiles = [];
+                            if (isMultiplayer) {
+                                if (currentPlayer === 1) score1++; else score2++;
+                                score1El.textContent = score1;
+                                score2El.textContent = score2;
+                            }
+                            soundMatch();
+                            checkGameOver();
+                        } else {
+                            if (isMultiplayer) {
+                                currentPlayer = currentPlayer === 1 ? 2 : 1;
+                                turnBadge.textContent = 'Turn: Player ' + currentPlayer;
+                            }
+                            soundMismatch();
+                            setTimeout(() => {
+                                flipDownNonMatch();
+                                requestAnimationFrame(draw);
+                            }, 800);
+                        }
+                    }
+                    break;
+                }
+                requestAnimationFrame(draw);
+            });
 
 
-        ctx.fillStyle = "rgb(0, 0, 0)";
-        ctx.font = "bold 20px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("You did it in "+ numTries + " tries!", 200, 250);
-        document.getElementById("container").style.display = "flex"; 
-        
-    }
-}
+            function newGame() {
+                stopTimer();
+                gameStartTime = null;
+                numTries = 0;
+                flippedTiles = [];
+                movesEl.textContent = '0';
+                timerEl.textContent = '0:00';
+                currentPlayer = 1;
+                score1 = 0;
+                score2 = 0;
+                score1El.textContent = '0';
+                score2El.textContent = '0';
+                turnBadge.textContent = 'Turn: Player 1';
+                moves1 = 0;
+                moves2 = 0;
+                gameOverShown = false;
+                container.style.display = 'none';
+                winOverlay.classList.remove('visible');
+                tiles = initGame();
+                lastFrame = performance.now();
+                requestAnimationFrame(draw);
+            }
 
+            document.querySelectorAll('.mode-tab').forEach(function(btn) {
+                btn.onclick = function() {
+                    if (this.classList.contains('active')) return;
+                    document.querySelector('.mode-tab.active').classList.remove('active');
+                    this.classList.add('active');
+                    isMultiplayer = this.getAttribute('data-mode') === 'multi';
+                    hudSolo.classList.toggle('visible', !isMultiplayer);
+                    hudMulti.classList.toggle('visible', isMultiplayer);
+                    newGame();
+                };
+            });
 
-</script>
-    
+            document.getElementById('newGame').onclick = newGame;
+            document.getElementById('newGameOverlay').onclick = newGame;
+
+            (function preloadThenStart() {
+                var loadCover = loadImageAsync(coverSrc);
+                var loadFaces = imageNames.map(function(name) { return loadImageAsync('img/' + name + '.png'); });
+                Promise.all([loadCover].concat(loadFaces)).then(function(imgs) {
+                    coverImg = imgs[0];
+                    faceImages = imgs.slice(1);
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                    tiles = initGame();
+                    lastFrame = performance.now();
+                    requestAnimationFrame(draw);
+                });
+            })();
+        })();
+    </script>
 </body>
 </html>
